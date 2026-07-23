@@ -1,0 +1,4 @@
+#doesnt commit the ./a.out and ./chip8_roms folder
+*.o
+*.out
+chip8_roms/
