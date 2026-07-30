@@ -17,9 +17,10 @@ typedef struct{
     uint8_t sound_timer; //sound register
     uint16_t pc; //program counter, tracks current address of the command 
     uint8_t sp; //stack pointer
-    uint16_t stack[16]; //stores address that the interpereter shoudl return to when finished with a subroutine
-    uint8_t display[WIDTH * HEIGHT]; //use the formula x +(y * width) to find pixel
+    uint16_t stack[16]; //stores address that the interpereter should return to when finished with a subroutine
+    char display[WIDTH * HEIGHT]; //use the formula x +(y * width) to find pixel
     size_t file_size;
+    bool skip_next_instruction; //flag to determine if the next instruction should be skipped
     char filename[256]; //store the filename of the rom
 
 } CHIP8;
