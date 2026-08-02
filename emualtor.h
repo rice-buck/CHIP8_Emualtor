@@ -30,3 +30,7 @@ void Initialize_screen(CHIP8 *self);
 void Display_screen(CHIP8 *self);
 
 bool Read_ch8_file(CHIP8 *self);
+
+void execute_command(uint8_t cmd[2], CHIP8 *self);
+
+void printMem(CHIP8 *self);

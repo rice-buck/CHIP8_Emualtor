@@ -110,7 +110,6 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
             }
             break;
 
-        // vvvv TEST THESE NEW COMMANDS vvvv
 
         case 0x1000: // Jump to address NNN (1NNN)
             //The interpreter sets the program counter to nnn.
@@ -118,15 +117,16 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
             break;
             
         case 0x2000://The interpreter increments the stack pointer, then puts the current PC on the top of the stack. The PC is then set to nnn.
-            self->stack[self->sp + 1] = self->pc;
-            self->pc = opcode & 0xFFFF; // Extract nnn
+            self->sp += 1;
+            self->stack[self->sp] = self->pc;
+            self->pc = opcode & 0x0FFF; // Extract nnn
             break;
 
         //3xkk - SE Vx, byte
         // Skip next instruction if Vx = kk.   
         // The interpreter compares register Vx to kk, and if they are equal, increments the program counter by 2.
         case 0x3000: {
-            uint16_t x = (opcode & 0x0F00) >> 8;
+            uint8_t x = (opcode & 0x0F00) >> 8;
             uint8_t kk = opcode & 0x00FF;
 
             if (self->V[x] == kk) {
@@ -141,7 +141,7 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
         // The interpreter compares register Vx to kk, and if they are not equal, increments the
         // program counter by 2.
         case 0x4000: {
-            uint16_t x = (opcode & 0x0F00) >> 8;
+            uint8_t x = (opcode & 0x0F00) >> 8;
             uint8_t kk = opcode & 0x00FF;
             
             if (self->V[x] != kk) {
@@ -156,33 +156,46 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
         // The interpreter compares register Vx to register Vy, and if they are equal, increments
         // the program counter by 2.
         case 0x5000: {
-            uint16_t x = (opcode & 0x0F00) >> 8;
+            uint8_t x = (opcode & 0x0F00) >> 8;
             uint8_t y = (opcode & 0x00F0) >> 4;
 
             if(self->V[x] == self->V[y]) {
                 self->skip_next_instruction = true; 
                 self->pc += 2;
             }
+            break;
         }
 
         // 6xkk - LD Vx, byte
         // Set Vx = kk.
         // The interpreter puts the value kk into register Vx.
         case 0x6000: {
-            uint16_t x = (opcode & 0x0F00) >> 8;
+            uint8_t x = (opcode & 0x0F00) >> 8;
             uint8_t kk = opcode & 0x00FF;
             self->V[x] = kk;
+            break;
         }
 
-        //^^^^^ TEST THESE NEW COMMANDS ^^^^
 
         // 7xkk - ADD Vx, byte
         // Set Vx = Vx + kk.
         // Adds the value kk to the value of register Vx, then stores the result in Vx.
+        case 0x7000: {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            uint8_t kk = opcode & 0x00FF;
+            self->V[x] = self->V[x] + kk;
+            break;
+        }
 
         // 8xy0 - LD Vx, Vy
         // Set Vx = Vy.
         // Stores the value of register Vy in register Vx.
+        case 0x8000: {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            uint8_t y = (opcode & 0x00F0) >> 4;
+            self->V[x] = self->V[y];
+            break; 
+        }
 
         // 8xy1 - OR Vx, Vy
         // Set Vx = Vx OR Vy.
@@ -233,17 +246,21 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
         // Skip next instruction if Vx != Vy.
         // The values of Vx and Vy are compared, and if they are not equal, the program counter
         // is increased by 2.
+
         // Annn - LD I, addr
         // Set I = nnn.
         // The value of register I is set to nnn.
+
         // Bnnn - JP V0, addr
         // Jump to location nnn + V0.
         // The program counter is set to nnn plus the value of V0.
+
         // Cxkk - RND Vx, byte
         // Set Vx = random byte AND kk.
         // The interpreter generates a random number from 0 to 255, which is then ANDed with the
         // value kk. The results are stored in Vx. See instruction 8xy2 for more information on
         // AND.
+
         // Dxyn - DRW Vx, Vy, nibble
         // Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
         // The interpreter reads n bytes from memory, starting at the address stored in I. These
@@ -298,34 +315,4 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
 
         // ... rest of CHIP-8 opcodes
     }
-}
-
-
-
-
-
-int main(){
-    CHIP8 chip8_1;
-
-    strncpy(chip8_1.filename, "2-ibm-logo.ch8", sizeof(chip8_1.filename) - 1); 
-    chip8_1.filename[sizeof(chip8_1.filename) - 1] = '\0'; // Ensure null termination
-
-    if(Read_ch8_file(&chip8_1)){
-        printf("File read successfully\n");
-    }
-    else{ printf("ERROR: file no worky");}
-
-    printf("Printing commands: \n");
-    printMem(&chip8_1);
-    
-    printf("\n========================\n");
-    printf("Printing screen\n");
-
-    Initialize_screen(&chip8_1);
-    Display_screen(&chip8_1);
-
-    printf("Clearing screen\n");
-    execute_command(&chip8_1.mem[0x200], &chip8_1); //each 16 bytes will go up by 10 in HEX, so 0x200 for 00 E0, then 0x210 for A2 2A
-    Display_screen(&chip8_1);
-
 }
