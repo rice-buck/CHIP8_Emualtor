@@ -32,7 +32,8 @@ int main(){
     
     uint8_t cmd[] = {0x11, 0x11, 0x22, 0x22, 0x30, 
         0x00, 0x40, 0x02, 0x50, 0x00, 0x64, 0x64,
-        0x74, 0x11, 0x84, 0x00};
+        0x74, 0x11, 0x84, 0x00, 0x84, 0x01, 0x84,
+         0x02, 0x84, 0x03};
 
     //test 0x1nnn
     execute_command(&cmd[0], &chip8_1);
@@ -87,20 +88,54 @@ int main(){
 
     //test 7xkk
     execute_command(&cmd[12], &chip8_1);
-    printf("Testing command 0x6xkk\n");
+    printf("Testing command 0x7xkk\n");
     uint8_t xseven = cmd[12] & 0x0F;
     printf("V[%02X] = %02X\n", xseven, chip8_1.V[xseven]);
     if(chip8_1.skip_next_instruction) printf("Skip next instruction!\n");
     else {printf("Don't skip next instruction\n");}
     printf("===========================================\n");
 
-    //test 8xkk
+    //test 8xy0
     execute_command(&cmd[14], &chip8_1);
-    printf("Testing command 0x6xkk\n");
+    printf("Testing command 0x8xy0\n");
     uint8_t xeight = cmd[14] & 0x0F; 
     uint8_t yeight = cmd[15] & 0xF0; 
-    printf("V[%02X] = %02X\n", xeight, chip8_1.V[xeight]);
-    printf("V[%02X] = %02X\n", yeight, chip8_1.V[yeight]);
+    printf("V[x = %02X] = %02X\n", xeight, chip8_1.V[xeight]);
+    printf("V[y = %02X] = %02X\n", yeight, chip8_1.V[yeight]);
+    if(chip8_1.skip_next_instruction) printf("Skip next instruction!\n");
+    else {printf("Don't skip next instruction\n");}
+    printf("===========================================\n");
+
+
+    //test 8xy1
+    execute_command(&cmd[16], &chip8_1);
+    printf("Testing command 0x8xy1\n");
+    uint8_t xeightone = cmd[16] & 0x0F; 
+    uint8_t yeightone = cmd[17] & 0xF0; 
+    printf("V[x = %02X] = %02X\n", xeightone, chip8_1.V[xeightone]);
+    printf("V[y = %02X] = %02X\n", yeightone, chip8_1.V[yeightone]);
+    if(chip8_1.skip_next_instruction) printf("Skip next instruction!\n");
+    else {printf("Don't skip next instruction\n");}
+    printf("===========================================\n");
+
+    //test 8xy2
+    execute_command(&cmd[18], &chip8_1);
+    printf("Testing command 0x8xy2\n");
+    uint8_t xeighttwo = cmd[18] & 0x0F; 
+    uint8_t yeighttwo = cmd[19] & 0xF0; 
+    printf("V[x = %02X] = %02X\n", xeighttwo, chip8_1.V[xeighttwo]);
+    printf("V[y = %02X] = %02X\n", yeighttwo, chip8_1.V[yeighttwo]);
+    if(chip8_1.skip_next_instruction) printf("Skip next instruction!\n");
+    else {printf("Don't skip next instruction\n");}
+    printf("===========================================\n");
+
+    //test 8xy3
+    execute_command(&cmd[20], &chip8_1);
+    printf("Testing command 0x8xy3\n");
+    uint8_t xeightthree = cmd[20] & 0x0F; 
+    uint8_t yeightthree = cmd[21] & 0xF0;
+    printf("V[x = %02X] = %02X\n", xeightthree, chip8_1.V[xeightthree]);
+    printf("V[y = %02X] = %02X\n", yeightthree, chip8_1.V[yeightthree]);
     if(chip8_1.skip_next_instruction) printf("Skip next instruction!\n");
     else {printf("Don't skip next instruction\n");}
     printf("===========================================\n");

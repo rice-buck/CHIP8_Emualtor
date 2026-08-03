@@ -12,6 +12,7 @@ typedef struct{
 
     uint8_t mem[4096];
     uint8_t V[16]; //general purpose registers
+    uint8_t VF; //flag register, used for carry and borrow
     uint16_t I; //store memory address
     uint8_t delay_timer; //Timers register
     uint8_t sound_timer; //sound register
