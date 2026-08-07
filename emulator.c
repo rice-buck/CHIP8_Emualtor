@@ -7,7 +7,7 @@
 
 void Initialize_screen(CHIP8 *self){
     for(int i = 0; i < (WIDTH * HEIGHT); ++i){
-        self->display[i] = '#';
+        self->display[i] = 0;
     }
 }
 
@@ -21,7 +21,7 @@ void Display_screen(CHIP8 *self){
         w %= 32;
 
         for(int x = 0; x < WIDTH; ++x){
-            printf("%c", self->display[x + (y * WIDTH)]);
+            printf("%d", self->display[x + (y * WIDTH)]);
             w += 1;
         }
     }
@@ -38,15 +38,15 @@ bool Read_ch8_file(CHIP8 *self){
 
     //get file size
     fseek(file_ptr, 0, SEEK_END); //moves cursor to EOF
-    long file_size = ftell(file_ptr); //returns cursor's position as a byte count, since cursor is at end this equals file size
+    self->file_size = ftell(file_ptr); //returns cursor's position as a byte count, since cursor is at end this equals file size
     rewind(file_ptr); //returns cursor back to byte 0
 
     //ptr starting at 0x200 or 512 in memory
     uint8_t *dest_ptr = &self->mem[512];
 
-    size_t bytes_read = fread(dest_ptr, 1, file_size, file_ptr);
+    size_t bytes_read = fread(dest_ptr, 1, self->file_size, file_ptr);
 
-    if (bytes_read != file_size) {
+    if (bytes_read != self->file_size) {
         printf("Error: Unexpected error while reading ROM.\n");
         fclose(file_ptr);
         return false;
@@ -58,12 +58,8 @@ bool Read_ch8_file(CHIP8 *self){
 }
 
 void printMem(CHIP8 *self){
-    FILE *file_ptr = fopen(self->filename, "rb");
-    fseek(file_ptr, 0, SEEK_END); //moves cursor to EOF
-    long file_size = ftell(file_ptr); //returns cursor's position as a byte count, since cursor is at end this equals file size
-
     size_t start_addr = 0x200;
-    size_t end_addr = start_addr + file_size;
+    size_t end_addr = start_addr + self->file_size;
 
    // Loop through memory in rows of 16 bytes
     for (size_t i = start_addr; i < end_addr; i += 16) {
@@ -189,9 +185,13 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
 
         
         case 0x8000: 
+             {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            uint8_t y = (opcode & 0x00F0) >> 4;
+            
             switch (opcode & 0x000F) {
-                uint8_t x = (opcode & 0x0F00) >> 8;
-                uint8_t y = (opcode & 0x00F0) >> 4;
+                
+                
                 // 8xy0 - LD Vx, Vy
                 // Set Vx = Vy.
                 // Stores the value of register Vy in register Vx.
@@ -235,8 +235,8 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
                 // kept, and stored in Vx.
                 case 0x0004: {
                     uint16_t result = self->V[x] + self->V[y];
-                    if(result > 255) self->VF = 1; 
-                    else self->VF = 0;
+                    if(result > 255) self->V[15] = 1; 
+                    else self->V[15] = 0;
 
                     self->V[x] = result & 0xFF;
                     break;
@@ -247,8 +247,8 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
                 // If Vx > Vy, then VF is set to 1, otherwise 0. Then Vy is subtracted from Vx, and the
                 // results stored in Vx.
                 case 0x0005: {
-                    if(self->V[x] > self->V[y]) self->VF = 1;
-                    else self->VF = 0;
+                    if(self->V[x] > self->V[y]) self->V[15] = 1;
+                    else self->V[15] = 0;
 
                     self->V[x] = self->V[x] - self->V[y];
                     break;
@@ -259,7 +259,7 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
                 // If the least-significant bit of Vx is 1, then VF is set to 1, otherwise 0. Then Vx is
                 // divided by 2.
                 case 0x0006:
-                    self->VF = self->V[x] & 0x01;
+                    self->V[15] = self->V[x] & 0x01;
                     self->V[x] = self->V[x] >> 1;
                     break;
 
@@ -268,8 +268,8 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
                 // If Vy > Vx, then VF is set to 1, otherwise 0. Then Vx is subtracted from Vy, and the
                 // results stored in Vx.
                 case 0x0007: 
-                    if(self->V[y] > self->V[x]) self->VF = 1;
-                    else self->VF = 0;
+                    if(self->V[y] > self->V[x]) self->V[15] = 1;
+                    else self->V[15] = 0;
 
                     self->V[x] = self->V[y] - self->V[x];
                     break;
@@ -279,9 +279,10 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
                 // If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0. Then Vx
                 // is multiplied by 2.
                 case 0x000E:
-                    self->VF = (self->V[x] & 0x80) >> 7; // Check the most significant bit
+                    self->V[15] = (self->V[x] & 0x80) >> 7; // Check the most significant bit
                     self->V[x] = self->V[x] << 1; 
                     break;
+                }
             }
         break;
 
@@ -303,69 +304,148 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
         // Annn - LD I, addr
         // Set I = nnn.
         // The value of register I is set to nnn.
+        case 0xA000:
+            self->I = opcode & 0x0FFF; // Extract last 12 bits
+            break;
 
         // Bnnn - JP V0, addr
         // Jump to location nnn + V0.
         // The program counter is set to nnn plus the value of V0.
+        case 0xB000:
+            self->pc = (opcode & 0x0FFF) + self->V[0];
+            break; 
 
         // Cxkk - RND Vx, byte
         // Set Vx = random byte AND kk.
         // The interpreter generates a random number from 0 to 255, which is then ANDed with the
-        // value kk. The results are stored in Vx. See instruction 8xy2 for more information on
-        // AND.
+        // value kk. The results are stored in Vx.
+        case 0xC000:{
+            srand(time(NULL)); 
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            uint8_t kk = opcode & 0xFF;
+            self->V[x] = rand() & kk;
+            break; 
+        }
 
+        //COME BACK TO THIS
         // Dxyn - DRW Vx, Vy, nibble
         // Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
+
         // The interpreter reads n bytes from memory, starting at the address stored in I. These
         // bytes are then displayed as sprites on screen at coordinates (Vx, Vy). Sprites are
         // XORed onto the existing screen. If this causes any pixels to be erased, VF is set to
         // 1, otherwise it is set to 0. If the sprite is positioned so part of it is outside the
         // coordinates of the display, it wraps around to the opposite side of the screen. See
         // instruction 8xy3 for more information on XOR, and section 2.4, Display, for more
-        // information on the Chip-8 screen and sprites.
+        // information on the Chip-8 screen and sprites
+        case 0xD000:{
+            uint8_t n = (opcode & 0x000F);
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            uint8_t y = (opcode & 0x00F0) >> 4;
+            self->V[15] = 0;
+            for(int i = 0; i < n; ++i){ //outer loop (one row): goes for n number of bytes
+                for(int j = 0; j <= 7; ++j){ //inner loop: runs one full sprite (8 bits)
+                    //use the formula x +(y * width) to find pixel
+                    uint8_t screen_x = (self->V[x]) + j % WIDTH; //modulo to deal with out of bounds by wrapping around
+                    uint8_t screen_y = (self->V[y]) + i % HEIGHT; 
+                    uint8_t before_display = self->display[screen_x + (screen_y * WIDTH)];
+
+                    self->display[screen_x + (screen_y * WIDTH)] ^= ((self->mem[self->I + i]) >> (7 - j)) & 1;//start with MSB first
+
+                    uint8_t after_display = self->display[screen_x + (screen_y * WIDTH)];
+                    
+                    if(before_display == 1  && after_display == 0) self->V[15] = 1;
+                }
+            }
+            break;
+        }
+        
+        //COME BACK TO THIS
         // Ex9E - SKP Vx
         // Skip next instruction if key with the value of Vx is pressed.
         // Checks the keyboard, and if the key corresponding to the value of Vx is currently in
         // the down position, PC is increased by 2.
+
+        //COME BACK TO THIS
         // ExA1 - SKNP Vx
         // Skip next instruction if key with the value of Vx is not pressed.
         // Checks the keyboard, and if the key corresponding to the value of Vx is currently in
         // the up position, PC is increased by 2.
-        // Fx07 - LD Vx, DT
-        // Set Vx = delay timer value.
-        // The value of DT is placed into Vx.
-        // Fx0A - LD Vx, K
-        // Wait for a key press, store the value of the key in Vx.
-        // All execution stops until a key is pressed, then the value of that key is stored in
-        // Vx.
-        // Fx15 - LD DT, Vx
-        // Set delay timer = Vx.
-        // DT is set equal to the value of Vx.
-        // Fx18 - LD ST, Vx
-        // Set sound timer = Vx.
-        // ST is set equal to the value of Vx.
-        // Fx1E - ADD I, Vx
-        // Set I = I + Vx.
-        // The values of I and Vx are added, and the results are stored in I.
-        // Fx29 - LD F, Vx
-        // Set I = location of sprite for digit Vx.
-        // The value of I is set to the location for the hexadecimal sprite corresponding to the
-        // value of Vx. See section 2.4, Display, for more information on the Chip-8 hexadecimal
-        // font.
-        // Fx33 - LD B, Vx
-        // Store BCD representation of Vx in memory locations I, I+1, and I+2.
-        // The interpreter takes the decimal value of Vx, and places the hundreds digit in memory
-        // at location in I, the tens digit at location I+1, and the ones digit at location I+2.
-        // Fx55 - LD [I], Vx
-        // Store registers V0 through Vx in memory starting at location I.
-        // The interpreter copies the values of registers V0 through Vx into memory, starting at
-        // the address in I.
-        // Fx65 - LD Vx, [I]
-        // Read registers V0 through Vx from memory starting at location I.
-        // The interpreter reads values from memory starting at location I into registers V0
-        // through Vx.
+
+        case 0xF000:
+            
+            switch (opcode & 0xF0FF) {
+                // Fx07 - LD Vx, DT
+                // Set Vx = delay timer value.
+                // The value of DT is placed into Vx.
+                case 0xF007:
+                    self->V[(opcode & 0x0F00) >> 8] = self->delay_timer;
+                    break;
+                
+
+                //COME BACK TO THIS
+                // Fx0A - LD Vx, K
+                // Wait for a key press, store the value of the key in Vx.
+                // All execution stops until a key is pressed, then the value of that key is stored in
+                // Vx.
+                // case 0xF00A: 
+
+                // Fx15 - LD DT, Vx
+                // Set delay timer = Vx.
+                // DT is set equal to the value of Vx.
+                case 0xF015: 
+                    self->delay_timer = self->V[(opcode & 0x0F00) >> 8];
+                    break; 
+
+                // Fx18 - LD ST, Vx
+                // Set sound timer = Vx.
+                // ST is set equal to the value of Vx.
+                case 0xF018:
+                    self->sound_timer = self->V[(opcode & 0x0F00) >> 8];
+                    break; 
+
+                // Fx1E - ADD I, Vx
+                // Set I = I + Vx.
+                // The values of I and Vx are added, and the results are stored in I.
+                case 0xF01E:
+                    self->I = self->I + self->V[(opcode & 0x0F00) >> 8];
+                    break;
+
+                //COME BACK TO THIS
+                // Fx29 - LD F, Vx
+                // Set I = location of sprite for digit Vx.
+                // The value of I is set to the location for the hexadecimal sprite corresponding to the
+                // value of Vx. See section 2.4, Display, for more information on the Chip-8 hexadecimal
+                // font.
+
+                // Fx33 - LD B, Vx
+                // Store BCD representation of Vx in memory locations I, I+1, and I+2.
+                // The interpreter takes the decimal value of Vx, and places the hundreds digit in memory
+                // at location in I, the tens digit at location I+1, and the ones digit at location I+2.
+                case 0xF033: {
+                    uint8_t Vx = self->V[(opcode & 0x0F00) >> 8];
+                    self->mem[self->I] =  (Vx / 100) % 10;
+                    self->mem[self->I + 1] = (Vx / 10) % 10;
+                    self->mem[self->I + 2] = Vx % 10;
+                    break; 
+                }
+
+                //COME BACK TO THIS 
+                // Fx55 - LD [I], Vx
+                // Store registers V0 through Vx in memory starting at location I.
+                // The interpreter copies the values of registers V0 through Vx into memory, starting at
+                // the address in I.
+                case 0xF055:
 
 
-        // ... rest of CHIP-8 opcodes
+                //COME BACK TO THIS 
+                // Fx65 - LD Vx, [I]
+                // Read registers V0 through Vx from memory starting at location I.
+                // The interpreter reads values from memory starting at location I into registers V0
+                // through Vx.
+
+
+                break;
+            }
     }
 }
