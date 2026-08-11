@@ -1,5 +1,4 @@
 #include "emualtor.h"
-#include <cstdio>
 
 
 int main(){

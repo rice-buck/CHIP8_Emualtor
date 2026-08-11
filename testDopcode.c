@@ -8,8 +8,8 @@ Initialize_screen(&chip8_1);
 Display_screen(&chip8_1);
 
 uint8_t cmd2[] = {0xD6, 0x78};
-chip8_1.V[6] = 10;
-chip8_1.V[7] = 4;
+chip8_1.V[6] = 50;
+chip8_1.V[7] = 15;
 
 chip8_1.I = 0x200;
 

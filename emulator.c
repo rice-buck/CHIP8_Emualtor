@@ -1,5 +1,6 @@
 //chip 8 emulator
 #include "emualtor.h"
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -327,7 +328,6 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
             break; 
         }
 
-        //COME BACK TO THIS
         // Dxyn - DRW Vx, Vy, nibble
         // Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
 
@@ -335,42 +335,57 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
         // bytes are then displayed as sprites on screen at coordinates (Vx, Vy). Sprites are
         // XORed onto the existing screen. If this causes any pixels to be erased, VF is set to
         // 1, otherwise it is set to 0. If the sprite is positioned so part of it is outside the
-        // coordinates of the display, it wraps around to the opposite side of the screen. See
-        // instruction 8xy3 for more information on XOR, and section 2.4, Display, for more
-        // information on the Chip-8 screen and sprites
+        // coordinates of the display, it wraps around to the opposite side of the screen. 
         case 0xD000:{
             uint8_t n = (opcode & 0x000F);
             uint8_t x = (opcode & 0x0F00) >> 8;
             uint8_t y = (opcode & 0x00F0) >> 4;
+
             self->V[15] = 0;
             for(int i = 0; i < n; ++i){ //outer loop (one row): goes for n number of bytes
                 for(int j = 0; j <= 7; ++j){ //inner loop: runs one full sprite (8 bits)
-                    //use the formula x +(y * width) to find pixel
-                    uint8_t screen_x = (self->V[x]) + j % WIDTH; //modulo to deal with out of bounds by wrapping around
-                    uint8_t screen_y = (self->V[y]) + i % HEIGHT; 
-                    uint8_t before_display = self->display[screen_x + (screen_y * WIDTH)];
+                    
+                    uint8_t screen_x = (self->V[x] + j) % WIDTH; //modulo to deal with out of bounds by wrapping around
+                    uint8_t screen_y = (self->V[y] + i) % HEIGHT; 
 
+                    uint8_t before_display = self->display[screen_x + (screen_y * WIDTH)];
+                    //use the formula x +(y * width) to find pixel
                     self->display[screen_x + (screen_y * WIDTH)] ^= ((self->mem[self->I + i]) >> (7 - j)) & 1;//start with MSB first
 
                     uint8_t after_display = self->display[screen_x + (screen_y * WIDTH)];
-                    
-                    if(before_display == 1  && after_display == 0) self->V[15] = 1;
+                    if(before_display == 1  && after_display == 0) self->V[15] = 1; //check if any pixels were erased
                 }
             }
             break;
         }
         
-        //COME BACK TO THIS
-        // Ex9E - SKP Vx
-        // Skip next instruction if key with the value of Vx is pressed.
-        // Checks the keyboard, and if the key corresponding to the value of Vx is currently in
-        // the down position, PC is increased by 2.
 
-        //COME BACK TO THIS
-        // ExA1 - SKNP Vx
-        // Skip next instruction if key with the value of Vx is not pressed.
-        // Checks the keyboard, and if the key corresponding to the value of Vx is currently in
-        // the up position, PC is increased by 2.
+        case 0xE000:{
+            uint8_t x = (opcode & 0x0F00) >> 8;
+
+            switch(opcode & 0xF0FF) {
+                // Ex9E - SKP Vx
+                // Skip next instruction if key with the value of Vx is pressed.
+                // Checks the keyboard, and if the key corresponding to the value of Vx is currently in
+                // the down position, PC is increased by 2.
+                case 0xE09E:
+                    if(self->keyboard[self->V[x]] == 1) self->pc += 2;
+                break;
+                
+
+                // ExA1 - SKNP Vx
+                // Skip next instruction if key with the value of Vx is not pressed.
+                // Checks the keyboard, and if the key corresponding to the value of Vx is currently in
+                // the up position, PC is increased by 2.
+                case 0xE0A1:
+                    if(self->keyboard[self->V[x]] == 0) self->pc += 2;
+                break;
+                
+                }
+            break;
+            }
+
+
 
         case 0xF000:
             
@@ -382,13 +397,25 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
                     self->V[(opcode & 0x0F00) >> 8] = self->delay_timer;
                     break;
                 
-
-                //COME BACK TO THIS
                 // Fx0A - LD Vx, K
                 // Wait for a key press, store the value of the key in Vx.
                 // All execution stops until a key is pressed, then the value of that key is stored in
                 // Vx.
-                // case 0xF00A: 
+                case 0xF00A: {
+                    bool isPressed = false;
+                    uint8_t pressed;
+
+                    while(!isPressed){
+                    for(int i = 0; i <= 15; ++i){
+                        if(self->keyboard[i] == 1) {
+                            isPressed = true;
+                            pressed = i;
+                            }
+                        }
+                    }
+                    self->V[(opcode & 0x0F00) >> 8] = pressed;
+                    break;
+                }
 
                 // Fx15 - LD DT, Vx
                 // Set delay timer = Vx.
@@ -411,12 +438,13 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
                     self->I = self->I + self->V[(opcode & 0x0F00) >> 8];
                     break;
 
-                //COME BACK TO THIS
                 // Fx29 - LD F, Vx
                 // Set I = location of sprite for digit Vx.
                 // The value of I is set to the location for the hexadecimal sprite corresponding to the
-                // value of Vx. See section 2.4, Display, for more information on the Chip-8 hexadecimal
-                // font.
+                // value of Vx.
+                case 0xF029:
+                    self->I = 
+                    break;
 
                 // Fx33 - LD B, Vx
                 // Store BCD representation of Vx in memory locations I, I+1, and I+2.
@@ -430,21 +458,29 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
                     break; 
                 }
 
-                //COME BACK TO THIS 
                 // Fx55 - LD [I], Vx
                 // Store registers V0 through Vx in memory starting at location I.
                 // The interpreter copies the values of registers V0 through Vx into memory, starting at
                 // the address in I.
-                case 0xF055:
-
-
-                //COME BACK TO THIS 
+                case 0xF055:{
+                    uint8_t x = (opcode & 0x0F00) >> 8;
+                    for(int i = 0; i <= x; ++i){
+                        self->mem[self->I + i] = self->V[i];
+                    }
+                    break;
+                }
+                    
                 // Fx65 - LD Vx, [I]
                 // Read registers V0 through Vx from memory starting at location I.
                 // The interpreter reads values from memory starting at location I into registers V0
                 // through Vx.
-
-
+                case 0xF065:{
+                    uint8_t x = (opcode & 0x0F00) >> 8;
+                    for(int i = 0; i <= x; ++i){
+                        self->V[i] = self->mem[self->I + i];
+                    }
+                    break;
+                }
                 break;
             }
     }

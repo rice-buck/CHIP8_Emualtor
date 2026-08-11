@@ -23,6 +23,7 @@ typedef struct{
     bool skip_next_instruction; //flag to determine if the next instruction should be skipped
     char filename[256]; //store the filename of the rom
     long file_size; //store the size of the rom
+    char keyboard[16]; //store the state of the keyboard, 1 if pressed, 0 if not pressed
 
 } CHIP8;
 
