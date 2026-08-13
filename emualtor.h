@@ -7,6 +7,7 @@
 
 #define WIDTH 64
 #define HEIGHT 32
+#define FONT_MEM_BASE 0x50
 
 
 typedef struct{
@@ -20,10 +21,10 @@ typedef struct{
     uint8_t sp; //stack pointer
     uint16_t stack[16]; //stores address that the interpereter should return to when finished with a subroutine
     uint8_t display[WIDTH * HEIGHT]; //use the formula x +(y * width) to find pixel
-    bool skip_next_instruction; //flag to determine if the next instruction should be skipped
     char filename[256]; //store the filename of the rom
     long file_size; //store the size of the rom
     char keyboard[16]; //store the state of the keyboard, 1 if pressed, 0 if not pressed
+
 
 } CHIP8;
 

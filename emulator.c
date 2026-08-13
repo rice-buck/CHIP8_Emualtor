@@ -5,6 +5,26 @@
 #include <stdio.h>
 
 
+const uint8_t font[80] = {
+        0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+        0x20, 0x60, 0x20, 0x20, 0x70, // 1
+        0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+        0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+        0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+        0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+        0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+        0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+        0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+        0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+        0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+        0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+        0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+        0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+        0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+        0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+};
+
+
 
 void Initialize_screen(CHIP8 *self){
     for(int i = 0; i < (WIDTH * HEIGHT); ++i){
@@ -81,10 +101,15 @@ void printMem(CHIP8 *self){
     printf("\n");
 }
 
+void load_font(CHIP8 *self){
+    for(int i = 0; i < 80; ++i){
+        self->mem[FONT_MEM_BASE + i] = font[i];
+    }
+}
+
 //reads command and executes, does not dictate WHICH command is being read
 void execute_command(uint8_t cmd[2], CHIP8 *self){
 
-    self->skip_next_instruction = false;
 
     // Shift the first byte left by 8 bits, then bitwise-OR with the second byte
     uint16_t opcode = (cmd[0] << 8) | cmd[1];
@@ -127,7 +152,6 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
             uint8_t kk = opcode & 0x00FF;
 
             if (self->V[x] == kk) {
-                self->skip_next_instruction  = true;
                 self->pc += 2;
             }
             break;
@@ -142,7 +166,7 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
             uint8_t kk = opcode & 0x00FF;
             
             if (self->V[x] != kk) {
-                self->skip_next_instruction  = true;
+
                 self->pc += 2;
             }
             break;
@@ -157,7 +181,6 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
             uint8_t y = (opcode & 0x00F0) >> 4;
 
             if(self->V[x] == self->V[y]) {
-                self->skip_next_instruction = true; 
                 self->pc += 2;
             }
             break;
@@ -180,7 +203,7 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
         case 0x7000: {
             uint8_t x = (opcode & 0x0F00) >> 8;
             uint8_t kk = opcode & 0x00FF;
-            self->V[x] = self->V[x] + kk;
+            self->V[x] +=        kk;
             break;
         }
 
@@ -295,7 +318,6 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
             uint8_t x = (opcode & 0x0F00) >> 8;
             uint8_t y = (opcode & 0x00F0) >> 4;
             if(self->V[x] != self->V[y]){
-                self->skip_next_instruction = true; 
                 self->pc += 2; 
             }
             break; 
@@ -403,20 +425,16 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
                 // Vx.
                 case 0xF00A: {
                     bool isPressed = false;
-                    uint8_t pressed;
-
-                    while(!isPressed){
-                    for(int i = 0; i <= 15; ++i){
-                        if(self->keyboard[i] == 1) {
+                    for (int i = 0; i <= 15; ++i) {
+                        if (self->keyboard[i] == 1) {
+                            self->V[(opcode & 0x0F00) >> 8] = i;
                             isPressed = true;
-                            pressed = i;
-                            }
+                            break;
                         }
                     }
-                    self->V[(opcode & 0x0F00) >> 8] = pressed;
+                    if (!isPressed) self->pc -= 2;  // retry this same instruction next cycle
                     break;
                 }
-
                 // Fx15 - LD DT, Vx
                 // Set delay timer = Vx.
                 // DT is set equal to the value of Vx.
@@ -442,9 +460,11 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
                 // Set I = location of sprite for digit Vx.
                 // The value of I is set to the location for the hexadecimal sprite corresponding to the
                 // value of Vx.
-                case 0xF029:
-                    self->I = 
+                case 0xF029:{
+                    uint8_t x = (opcode & 0x0F00) >> 8;
+                    self->I = FONT_MEM_BASE + (self->V[x] * 5); //formula is FONT_BASE_MEM(0x50) + (digit stored in Vx * 5 bytes, since each character is 5 bytes)
                     break;
+                }
 
                 // Fx33 - LD B, Vx
                 // Store BCD representation of Vx in memory locations I, I+1, and I+2.
