@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
+#include <SDL2/SDL.h>
 
 #define WIDTH 64
 #define HEIGHT 32
@@ -25,7 +26,6 @@ typedef struct{
     long file_size; //store the size of the rom
     char keyboard[16]; //store the state of the keyboard, 1 if pressed, 0 if not pressed
 
-
 } CHIP8;
 
 void Initialize_screen(CHIP8 *self);
@@ -33,6 +33,10 @@ void Initialize_screen(CHIP8 *self);
 void Display_screen(CHIP8 *self);
 
 bool Read_ch8_file(CHIP8 *self);
+
+void load_font(CHIP8 *self);
+
+bool check_keypress(CHIP8 *self);
 
 void execute_command(uint8_t cmd[2], CHIP8 *self);
 

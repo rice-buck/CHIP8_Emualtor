@@ -1,5 +1,6 @@
 //chip 8 emulator
 #include "emualtor.h"
+#include <SDL2/SDL_scancode.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -42,11 +43,14 @@ void Display_screen(CHIP8 *self){
         w %= 32;
 
         for(int x = 0; x < WIDTH; ++x){
-            printf("%d", self->display[x + (y * WIDTH)]);
+            if((self->display[x + (y * WIDTH)]) == 0){
+                printf(" ");
+            } else {
+                printf("█");
+            }
             w += 1;
         }
     }
-    printf("\nHeight: %d  Width: %d \n", h, w);
 }
 
 bool Read_ch8_file(CHIP8 *self){
@@ -101,11 +105,75 @@ void printMem(CHIP8 *self){
     printf("\n");
 }
 
+
 void load_font(CHIP8 *self){
     for(int i = 0; i < 80; ++i){
         self->mem[FONT_MEM_BASE + i] = font[i];
     }
 }
+
+
+bool check_keypress(CHIP8* self) {
+    SDL_Event event;
+
+    while (SDL_PollEvent(&event)) {
+        // Handle window close X button
+        if (event.type == SDL_QUIT) {
+            // handle exit logic
+            return false;
+        }
+
+        // Key is pressed DOWN
+        else if (event.type == SDL_KEYDOWN) {
+            switch (event.key.keysym.scancode) {
+                case SDL_SCANCODE_0:    self->keyboard[0x0] = 1; break; // CHIP-8 '0'
+                case SDL_SCANCODE_1:    self->keyboard[0x1] = 1; break; // CHIP-8 '1'
+                case SDL_SCANCODE_2:    self->keyboard[0x2] = 1; break; // CHIP-8 '2'
+                case SDL_SCANCODE_3:    self->keyboard[0x3] = 1; break; 
+                case SDL_SCANCODE_4:    self->keyboard[0x4] = 1; break; 
+                case SDL_SCANCODE_5:    self->keyboard[0x5] = 1; break; 
+                case SDL_SCANCODE_6:    self->keyboard[0x6] = 1; break; 
+                case SDL_SCANCODE_7:    self->keyboard[0x7] = 1; break; 
+                case SDL_SCANCODE_8:    self->keyboard[0x8] = 1; break; 
+                case SDL_SCANCODE_9:    self->keyboard[0x9] = 1; break; 
+                case SDL_SCANCODE_A:    self->keyboard[0xA] = 1; break; 
+                case SDL_SCANCODE_B:    self->keyboard[0xB] = 1; break; 
+                case SDL_SCANCODE_C:    self->keyboard[0xC] = 1; break; 
+                case SDL_SCANCODE_D:    self->keyboard[0xD] = 1; break; 
+                case SDL_SCANCODE_E:    self->keyboard[0xE] = 1; break; 
+                case SDL_SCANCODE_F:    self->keyboard[0xF] = 1; break; 
+                
+                default: break;
+            }
+        }
+
+        // Key is lifted UP / Raised
+        else if (event.type == SDL_KEYUP) {
+            switch (event.key.keysym.scancode) {
+                case SDL_SCANCODE_0:    self->keyboard[0x0] = 0; break; // Cleared
+                case SDL_SCANCODE_1:    self->keyboard[0x1] = 0; break; // Cleared
+                case SDL_SCANCODE_2:    self->keyboard[0x2] = 0; break; // Cleared
+                case SDL_SCANCODE_3:    self->keyboard[0x3] = 0; break; 
+                case SDL_SCANCODE_4:    self->keyboard[0x4] = 0; break; 
+                case SDL_SCANCODE_5:    self->keyboard[0x5] = 0; break; 
+                case SDL_SCANCODE_6:    self->keyboard[0x6] = 0; break; 
+                case SDL_SCANCODE_7:    self->keyboard[0x7] = 0; break; 
+                case SDL_SCANCODE_8:    self->keyboard[0x8] = 0; break; 
+                case SDL_SCANCODE_9:    self->keyboard[0x9] = 0; break; 
+                case SDL_SCANCODE_A:    self->keyboard[0xA] = 0; break; 
+                case SDL_SCANCODE_B:    self->keyboard[0xB] = 0; break; 
+                case SDL_SCANCODE_C:    self->keyboard[0xC] = 0; break; 
+                case SDL_SCANCODE_D:    self->keyboard[0xD] = 0; break; 
+                case SDL_SCANCODE_E:    self->keyboard[0xE] = 0; break; 
+                case SDL_SCANCODE_F:    self->keyboard[0xF] = 0; break;
+                
+                default: break;
+            }
+        }
+    }
+    return true;
+}
+
 
 //reads command and executes, does not dictate WHICH command is being read
 void execute_command(uint8_t cmd[2], CHIP8 *self){
@@ -113,6 +181,7 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
 
     // Shift the first byte left by 8 bits, then bitwise-OR with the second byte
     uint16_t opcode = (cmd[0] << 8) | cmd[1];
+    self->pc += 2;
 
     printf("Command: %04X\n", opcode);
 
@@ -121,7 +190,7 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
             switch (opcode) {
                 case 0x00E0: // Clear display
                     for (int i = 0; i < (WIDTH * HEIGHT); ++i) {
-                        self->display[i] = ' ';
+                        self->display[i] = 0;
                     }
                     break;
 
