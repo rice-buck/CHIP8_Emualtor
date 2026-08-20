@@ -9,6 +9,7 @@
 #define WIDTH 64
 #define HEIGHT 32
 #define FONT_MEM_BASE 0x50
+#define SCALE 10 // Scale factor for rendering the display
 
 
 typedef struct{
@@ -30,13 +31,19 @@ typedef struct{
 
 void Initialize_screen(CHIP8 *self);
 
-void Display_screen(CHIP8 *self);
+void Initialize_CHIP8(CHIP8 *self);
+
+void Display_screen_terminal(CHIP8 *self);
+
+void Draw_screen_SDL(CHIP8 *self, SDL_Renderer *renderer);
 
 bool Read_ch8_file(CHIP8 *self);
 
 void load_font(CHIP8 *self);
 
-bool check_keypress(CHIP8 *self);
+bool check_keypress_start(CHIP8 *self);
+
+bool check_keypress_main(CHIP8 *self);
 
 void execute_command(uint8_t cmd[2], CHIP8 *self);
 

@@ -27,13 +27,30 @@ const uint8_t font[80] = {
 
 
 
-void Initialize_screen(CHIP8 *self){
-    for(int i = 0; i < (WIDTH * HEIGHT); ++i){
-        self->display[i] = 0;
+void Initialize_CHIP8(CHIP8 *self){
+    self->pc = 0x200; //program counter starts at 0x200
+    self->I = 0; //reset index register
+    self->sp = 0; //reset stack pointer
+
+    for(int i = 0; i < 16; ++i){
+        self->V[i] = 0; //reset registers
+        self->stack[i] = 0; //reset stack
+        self->keyboard[i] = 0; //reset keyboard state
     }
+
+    for(int i = 0; i < (WIDTH * HEIGHT); ++i){
+        self->display[i] = 0; //clear display
+    }
+
+    for(int i = 0; i < 4096; ++i){
+        self->mem[i] = 0; //clear memory
+    }
+
+    self->delay_timer = 0;
+    self->sound_timer = 0;
 }
 
-void Display_screen(CHIP8 *self){
+void Display_screen_terminal(CHIP8 *self){
     int w = 0;
     int h = 0;
 
@@ -51,6 +68,26 @@ void Display_screen(CHIP8 *self){
             w += 1;
         }
     }
+}
+
+void Draw_screen_SDL(CHIP8 *self, SDL_Renderer *renderer) {
+    // Paint the whole window black
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+
+    // Switch to white for the "on" pixels
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+
+    for (int y = 0; y < HEIGHT; ++y) {
+        for (int x = 0; x < WIDTH; ++x) {
+            if (self->display[x + (y * WIDTH)]) {
+                SDL_Rect pixel = { x * SCALE, y * SCALE, SCALE, SCALE };
+                SDL_RenderFillRect(renderer, &pixel);
+            }
+        }
+    }
+
+    SDL_RenderPresent(renderer);  // flip the back buffer to the screen
 }
 
 bool Read_ch8_file(CHIP8 *self){
@@ -82,6 +119,7 @@ bool Read_ch8_file(CHIP8 *self){
     return true;
 }
 
+
 void printMem(CHIP8 *self){
     size_t start_addr = 0x200;
     size_t end_addr = start_addr + self->file_size;
@@ -112,8 +150,82 @@ void load_font(CHIP8 *self){
     }
 }
 
+bool check_keypress_start(CHIP8 *self){
+SDL_Event event;
+int choice = 0;
 
-bool check_keypress(CHIP8* self) {
+
+    while (SDL_PollEvent(&event)) {
+        // Handle window close X button
+        if (choice == 0xF) {
+            // handle exit logic
+            return false;
+        }
+
+        
+        // Key is pressed DOWN
+        if (event.type == SDL_KEYDOWN) {
+            switch (event.key.keysym.scancode) {
+                case SDL_SCANCODE_0:    choice = 0; break; // CHIP-8 '0'
+                case SDL_SCANCODE_1:    choice = 1; break; // CHIP-8 '1'
+                case SDL_SCANCODE_2:    choice = 2; break; // CHIP-8 '2'
+                case SDL_SCANCODE_3:    choice = 3; break; 
+                case SDL_SCANCODE_4:    choice = 4; break; 
+                case SDL_SCANCODE_5:    choice = 5; break; 
+                case SDL_SCANCODE_6:    choice = 6; break; 
+                case SDL_SCANCODE_7:    choice = 7; break; 
+                case SDL_SCANCODE_8:    choice = 8; break; 
+                case SDL_SCANCODE_9:    choice = 9; break; 
+                case SDL_SCANCODE_A:    choice = 0xA; break; 
+                case SDL_SCANCODE_B:    choice = 0xB; break; 
+                case SDL_SCANCODE_C:    choice = 0xC; break; 
+                case SDL_SCANCODE_D:    choice = 0xD; break; 
+                case SDL_SCANCODE_E:    choice = 0xE; break; 
+                case SDL_SCANCODE_F:    choice = 0xF; break; 
+                
+                default: break;
+            }
+        }
+    }
+
+    if(choice != 0) {
+        switch(choice) {
+        case 1:
+            strcpy(self->filename, "1-chip8-logo.ch8");
+            break;
+        case 2:
+            strcpy(self->filename, "2-ibm-logo.ch8");
+            break;
+        case 3:
+            strcpy(self->filename, "3-corax+.ch8");
+            break;
+        case 4:
+            strcpy(self->filename, "4-flags.ch8");
+            break;
+        case 5:
+            strcpy(self->filename, "5-quirks.ch8");
+            break;
+        case 6:
+            strcpy(self->filename, "6-keypad.ch8");
+            break;
+        case 7:
+            strcpy(self->filename, "7-beep.ch8");
+            break;
+        case 8:
+            strcpy(self->filename, "8-scrolling.ch8");
+            break;
+        default:
+            printf("Invalid choice. Exiting.\n");
+            return false;
+        }
+        return false; // Exit the start screen loop after a valid choice is made
+    }
+    
+    return true;
+}
+
+
+bool check_keypress_main(CHIP8* self) {
     SDL_Event event;
 
     while (SDL_PollEvent(&event)) {
@@ -183,7 +295,6 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
     uint16_t opcode = (cmd[0] << 8) | cmd[1];
     self->pc += 2;
 
-    printf("Command: %04X\n", opcode);
 
     switch (opcode & 0xF000) { // Look at the first nibble (4 bits)
         case 0x0000:
