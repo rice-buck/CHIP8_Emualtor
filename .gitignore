@@ -1,7 +1,6 @@
 #doesnt commit the ./a.out and ./chip8_roms folder
 *.o
 *.out
-*.ch8
 chip8_roms/
 chip8
 
