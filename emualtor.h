@@ -10,6 +10,7 @@
 #define HEIGHT 32
 #define FONT_MEM_BASE 0x50
 #define SCALE 10 // Scale factor for rendering the display
+#define ROM_DIR "roms/" // Folder the .ch8 ROMs are loaded from
 
 
 typedef struct{

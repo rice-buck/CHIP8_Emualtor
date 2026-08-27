@@ -210,28 +210,28 @@ int choice = 0;
     if(choice != 0) {
         switch(choice) {
         case 1:
-            strcpy(self->filename, "1-chip8-logo.ch8");
+            strcpy(self->filename, ROM_DIR "1-chip8-logo.ch8");
             break;
         case 2:
-            strcpy(self->filename, "2-ibm-logo.ch8");
+            strcpy(self->filename, ROM_DIR "2-ibm-logo.ch8");
             break;
         case 3:
-            strcpy(self->filename, "3-corax+.ch8");
+            strcpy(self->filename, ROM_DIR "3-corax+.ch8");
             break;
         case 4:
-            strcpy(self->filename, "4-flags.ch8");
+            strcpy(self->filename, ROM_DIR "4-flags.ch8");
             break;
         case 5:
-            strcpy(self->filename, "5-quirks.ch8");
+            strcpy(self->filename, ROM_DIR "5-quirks.ch8");
             break;
         case 6:
-            strcpy(self->filename, "6-keypad.ch8");
+            strcpy(self->filename, ROM_DIR "6-keypad.ch8");
             break;
         case 7:
-            strcpy(self->filename, "7-beep.ch8");
+            strcpy(self->filename, ROM_DIR "7-beep.ch8");
             break;
         case 8:
-            strcpy(self->filename, "8-scrolling.ch8");
+            strcpy(self->filename, ROM_DIR "8-scrolling.ch8");
             break;
         default:
             printf("Invalid choice. Exiting.\n");

@@ -42,12 +42,16 @@ renders to the SDL2 window each frame.
 The ROM menu is hardcoded, not read from the folder automatically. To add
 or change a ROM:
 
-1. Place the `.ch8` file in the project root, next to the other ROMs.
+1. Place the `.ch8` file in the `roms/` folder, next to the other ROMs.
 2. In `emulator.c`, find the `switch(choice)` block inside
    `check_keypress_start` and add or edit a case with the filename, e.g.
-   `strcpy(self->filename, "9-mygame.ch8");`.
+   `strcpy(self->filename, ROM_DIR "9-mygame.ch8");`.
 3. Update the printed option text in `print_menu_selection` so it matches.
 4. Rebuild with `make`.
+
+All ROMs are read from the folder set by `ROM_DIR` in `emualtor.h`
+(`"roms/"` by default), so every filename in the switch statement is
+built from that single constant.
 
 Only `.ch8` files will work. `Read_ch8_file` does no format checking, it
 just reads the file's raw bytes straight into CHIP-8 memory starting at
