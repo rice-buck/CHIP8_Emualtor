@@ -41,9 +41,13 @@ bool Read_ch8_file(CHIP8 *self);
 
 void load_font(CHIP8 *self);
 
-bool check_keypress_start(CHIP8 *self);
+char check_keypress_start(CHIP8 *self);
 
-bool check_keypress_main(CHIP8 *self);
+char file_select_menu(CHIP8 *self);
+
+void print_menu_selection();
+
+char check_keypress_main(CHIP8 *self);
 
 void execute_command(uint8_t cmd[2], CHIP8 *self);
 

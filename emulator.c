@@ -26,6 +26,12 @@ const uint8_t font[80] = {
 };
 
 
+void load_font(CHIP8 *self){
+    for(int i = 0; i < 80; ++i){
+        self->mem[FONT_MEM_BASE + i] = font[i];
+    }
+}
+
 
 void Initialize_CHIP8(CHIP8 *self){
     self->pc = 0x200; //program counter starts at 0x200
@@ -48,6 +54,8 @@ void Initialize_CHIP8(CHIP8 *self){
 
     self->delay_timer = 0;
     self->sound_timer = 0;
+
+    load_font(self);
 }
 
 void Display_screen_terminal(CHIP8 *self){
@@ -114,7 +122,6 @@ bool Read_ch8_file(CHIP8 *self){
         return false;
     }
 
-    printf("Bytes read %zu\n", bytes_read);
     fclose(file_ptr);
     return true;
 }
@@ -144,27 +151,39 @@ void printMem(CHIP8 *self){
 }
 
 
-void load_font(CHIP8 *self){
-    for(int i = 0; i < 80; ++i){
-        self->mem[FONT_MEM_BASE + i] = font[i];
-    }
+
+void print_menu_selection() {
+    printf("Press the corresponding number key (1-8) to select a program.\n");
+    printf("1. 1-chip8-logo.ch8\n");
+    printf("2. 2-ibm-logo.ch8\n");
+    printf("3. 3-corax+.ch8\n");    
+    printf("4. 4-flags.ch8\n");
+    printf("5. 5-quirks.ch8\n");
+    printf("6. 6-keypad.ch8\n");
+    printf("7. 7-beep.ch8\n");
+    printf("8. 8-scrolling.ch8\n");
+    printf("Press X button on the window or ESCAPE key to exit.\n");
+    printf("Press Z key to reselect a program.\n");
+
+    printf("\n=== PLEASE CLICK ON THE WINDOW TO FOCUS BEFORE PRESSING KEYS ===\n");
 }
 
-bool check_keypress_start(CHIP8 *self){
+char check_keypress_start(CHIP8 *self){
 SDL_Event event;
 int choice = 0;
 
-
     while (SDL_PollEvent(&event)) {
         // Handle window close X button
-        if (choice == 0xF) {
-            // handle exit logic
-            return false;
+        if (event.type == SDL_QUIT) {
+            return 'q'; // Return 'q' to indicate exit
         }
 
-        
         // Key is pressed DOWN
         if (event.type == SDL_KEYDOWN) {
+            if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
+                return 'q'; // Return 'q' to indicate exit
+            }
+
             switch (event.key.keysym.scancode) {
                 case SDL_SCANCODE_0:    choice = 0; break; // CHIP-8 '0'
                 case SDL_SCANCODE_1:    choice = 1; break; // CHIP-8 '1'
@@ -216,23 +235,30 @@ int choice = 0;
             break;
         default:
             printf("Invalid choice. Exiting.\n");
-            return false;
+            return 'q';
         }
-        return false; // Exit the start screen loop after a valid choice is made
+        return 's'; // Valid choice made, exit the start screen loop
     }
-    
-    return true;
+
+    return 'r'; // Keep waiting for a valid key press
 }
 
+char file_select_menu(CHIP8 *self) {
+    char result;
+    do {
+        result = check_keypress_start(self);
+    } while (result == 'r');
+    return result; // 'q' if the user quit, 's' if a program was selected
+}
 
-bool check_keypress_main(CHIP8* self) {
+char check_keypress_main(CHIP8* self) {
     SDL_Event event;
 
     while (SDL_PollEvent(&event)) {
         // Handle window close X button
         if (event.type == SDL_QUIT) {
             // handle exit logic
-            return false;
+            return 'q'; // Return a special character to indicate exit
         }
 
         // Key is pressed DOWN
@@ -254,6 +280,8 @@ bool check_keypress_main(CHIP8* self) {
                 case SDL_SCANCODE_D:    self->keyboard[0xD] = 1; break; 
                 case SDL_SCANCODE_E:    self->keyboard[0xE] = 1; break; 
                 case SDL_SCANCODE_F:    self->keyboard[0xF] = 1; break; 
+                case SDL_SCANCODE_ESCAPE: return 'q'; // Return 'q' to indicate exit
+                case SDL_SCANCODE_Z: return 'a'; // Return 'a' to indicate reselection of program
                 
                 default: break;
             }
@@ -283,7 +311,7 @@ bool check_keypress_main(CHIP8* self) {
             }
         }
     }
-    return true;
+    return 'r';
 }
 
 
@@ -401,7 +429,6 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
                 // Stores the value of register Vy in register Vx.
                 case 0x0000: {
                     self->V[x] = self->V[y];
-                    printf("X = Y\n");
                     break; 
                 }
 
@@ -410,7 +437,6 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
                 // Performs a bitwise OR on the values of Vx and Vy, then stores the result in Vx.
                 case 0x0001: {
                     self->V[x] = self->V[x] | self->V[y];
-                    printf("OR\n");
                     break;
                 }
 
@@ -419,7 +445,6 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
                 // Performs a bitwise AND on the values of Vx and Vy, then stores the result in Vx.
                 case 0x0002: {
                     self->V[x] = self->V[x] & self->V[y];
-                    printf("AND\n");
                     break;
                 }
 
@@ -428,7 +453,6 @@ void execute_command(uint8_t cmd[2], CHIP8 *self){
                 // Performs a bitwise exclusive OR on the values of Vx and Vy, then stores the result in Vx. 
                 case 0x0003: {
                     self->V[x] = self->V[x] ^ self->V[y];
-                    printf("XOR\n");
                     break;
                 }
 

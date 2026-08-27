@@ -3,4 +3,5 @@
 *.out
 *.ch8
 chip8_roms/
+chip8
 
